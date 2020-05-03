@@ -3,6 +3,7 @@ import cv2 as cv
 from matplotlib import pyplot as plt
 import os
 import sys
+import deteccion_haar as haardet
 
 
 def load(directory):
@@ -13,30 +14,115 @@ def load(directory):
     return [cv.imread(directory + '/' + file, 0) for file in files if not file.startswith('.')]
 
 
-def main():
-    print(sys.version)
-    print(cv.__version__)
-    input_images = load('testing_ocr')
-    for image in input_images:
-        th = cv.adaptiveThreshold(image, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2)
-        ret2, th2 = cv.threshold(image,127,255,cv.THRESH_BINARY)
-        # Otsu's thresholding
-        ret3, th3 = cv.threshold(image, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
-        # Otsu's thresholding after Gaussian filtering
+def load_color(directory):
+    """Recibe el nombre de un directorio y devuelve una lista con las imagenes contenidas en el a color"""
+    cur_dir = os.path.abspath(os.curdir)
+    files = os.listdir(cur_dir + '/' + directory)
+    return [cv.imread(directory + '/' + file) for file in files if not file.startswith('.')]
+
+
+def umbralizado(images, ksize=11, c=2):
+    imagenes_umbralizadas = []
+    for i in range(len(images)):
+        image = images[i]
         blur = cv.GaussianBlur(image, (5, 5), 0)
+
+        th = cv.adaptiveThreshold(image, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, ksize, c)
+        ret2, th2 = cv.threshold(image, 127, 255, cv.THRESH_BINARY)
+        ret3, th3 = cv.threshold(image, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
         ret4, th4 = cv.threshold(blur, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
-        plt.imshow(th, "gray")
+
+        # plt.imshow(th, "gray")
+        # plt.show()
+        # plt.imshow(th2, "gray")
+        # plt.show()
+        # plt.imshow(th3, "gray")
+        # plt.show()
+        # plt.imshow(th4, "gray")
+        # plt.show()
+
+        imagenes_umbralizadas.append(th3)
+
+    return imagenes_umbralizadas
+
+
+def pintar_matriculas(input_images):
+    clasificador_matriculas = haardet.HaarDetector('haar_opencv_4.1-4.2/matriculas.xml')
+    matriculas = clasificador_matriculas.detect(input_images)
+    for i in range(len(matriculas)):
+        image = input_images[i]
+        for (x, y, w, h) in matriculas[i]:
+            image = cv.rectangle(image, (x, y), (x + w, y + h), (0, 0, 255), 2)
+        plt.imshow(image)
         plt.show()
-        plt.imshow(th2, "gray")
-        plt.show()
-        plt.imshow(th3, "gray")
-        plt.show()
-        plt.imshow(th4, "gray")
-        plt.show()
-    # for i in range(28):
-    #     plt.imshow(input[i], "gray")
+
+
+def get_contorno_matricula_haar(input_images):
+    clasificador_matriculas = haardet.HaarDetector('haar_opencv_4.1-4.2/matriculas.xml')
+    return clasificador_matriculas.detect2(input_images, 1.1, 5)
+
+
+def get_contornos_caracteres(images):
+    contornos = []
+    for image in images:
+        aux = []
+        contours, _ = cv.findContours(image, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
+        for cnt in contours:
+            x, y, w, h = cv.boundingRect(cnt)
+            if h > 1.2 * w:
+                aux.append((x, y, w, h))
+        contornos.append(aux)
+
+    return contornos
+
+
+def get_contornos_matricula(images):
+    contornos = []
+    for image in images:
+        aux = []
+        contours, _ = cv.findContours(image, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
+        for cnt in contours:
+            x, y, w, h = cv.boundingRect(cnt)
+            if 1.5 * h < w < 7 * h:
+                aux.append((x, y, w, h))
+        contornos.append(aux)
+
+    return contornos
+
+
+def localizar():
+    input_images = load('testing_ocr')
+    color_images = load_color('testing_ocr')
+    umbral = umbralizado(input_images)
+    matriculas = get_contorno_matricula_haar(input_images)
+
+    # for i in range(len(color_images)):
+    #     image = color_images[i]
+    #     contornos_matricula = matriculas[i]
+    #     for (x, y, w, h) in contornos_matricula:
+    #         image = cv.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+    #     plt.imshow(image)
     #     plt.show()
 
 
+    # roi_matricula = [img[mat[0,1]:mat[0,1]+mat[0,3], mat[0,0]:mat[0,0]+mat[0,2]] for (img, mat) in zip(input_images, matriculas)]
+    roi_matricula = [img[mat[0,1]:mat[0,1]+mat[0,3], mat[0,0]:mat[0,0]+mat[0,2]] for (img, mat) in zip(input_images, matriculas)]
+    # for image in roi_matricula:
+    #     plt.imshow(image)
+    #     plt.show()
+
+    matriculas_umbral = umbralizado(roi_matricula)
+    # for m in matriculas_umbral:
+    #     plt.imshow(m, "gray")
+    #     plt.show()
+
+    caracteres = get_contornos_caracteres(matriculas_umbral)
+    for (car, img) in zip(caracteres, matriculas_umbral):
+        for (x, y, w, h) in car:
+            img = cv.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        plt.imshow(img)
+        plt.show()
+
+
 if __name__ == "__main__":
-    main()
+    localizar()
