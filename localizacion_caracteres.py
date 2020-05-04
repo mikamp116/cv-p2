@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 import cv2 as cv
 from matplotlib import pyplot as plt
 import os
@@ -21,11 +21,11 @@ def load_color(directory):
     return [cv.imread(directory + '/' + file) for file in files if not file.startswith('.')]
 
 
-def umbralizado(images, ksize=11, c=2):
+def umbralizado(images, ksize=5, c=2):
     imagenes_umbralizadas = []
     for i in range(len(images)):
         image = images[i]
-        blur = cv.GaussianBlur(image, (5, 5), 0)
+        blur = cv.GaussianBlur(image, (3, 7), 0)
 
         th = cv.adaptiveThreshold(image, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, ksize, c)
         ret2, th2 = cv.threshold(image, 127, 255, cv.THRESH_BINARY)
@@ -41,7 +41,7 @@ def umbralizado(images, ksize=11, c=2):
         # plt.imshow(th4, "gray")
         # plt.show()
 
-        imagenes_umbralizadas.append(th3)
+        imagenes_umbralizadas.append(th)
 
     return imagenes_umbralizadas
 
@@ -69,7 +69,7 @@ def get_contornos_caracteres(images):
         contours, _ = cv.findContours(image, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
         for cnt in contours:
             x, y, w, h = cv.boundingRect(cnt)
-            if h > 1.2 * w:
+            if h > 1.1 * w and h > image.shape[0] * 0.4:
                 aux.append((x, y, w, h))
         contornos.append(aux)
 
@@ -105,23 +105,42 @@ def localizar():
     #     plt.show()
 
 
-    # roi_matricula = [img[mat[0,1]:mat[0,1]+mat[0,3], mat[0,0]:mat[0,0]+mat[0,2]] for (img, mat) in zip(input_images, matriculas)]
     roi_matricula = [img[mat[0,1]:mat[0,1]+mat[0,3], mat[0,0]:mat[0,0]+mat[0,2]] for (img, mat) in zip(input_images, matriculas)]
-    # for image in roi_matricula:
-    #     plt.imshow(image)
-    #     plt.show()
+    roi_matricula_color = [img[mat[0,1]:mat[0,1]+mat[0,3], mat[0,0]:mat[0,0]+mat[0,2]] for (img, mat) in zip(color_images, matriculas)]
+    """for image in roi_matricula:
+        plt.imshow(image)
+        plt.show()"""
 
-    matriculas_umbral = umbralizado(roi_matricula)
-    # for m in matriculas_umbral:
-    #     plt.imshow(m, "gray")
-    #     plt.show()
+    matriculas_umbral = umbralizado(roi_matricula, 7, 5)
+    """for m in matriculas_umbral:
+        plt.imshow(m, "gray")
+        plt.show()"""
 
     caracteres = get_contornos_caracteres(matriculas_umbral)
-    for (car, img) in zip(caracteres, matriculas_umbral):
+    for (car, img) in zip(caracteres, roi_matricula_color):
+        means = []
+        sds = []
+        reg = []
         for (x, y, w, h) in car:
-            img = cv.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            ch = img[y:y+h, x:x+w,:]
+            means.append(np.mean(ch))
+            sds.append(np.std(ch))
+
+            if (np.std(ch) > 30):
+                img = cv.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 1)
+                cont = 0
+                for i in range(ch.shape[0]):
+                    for j in range(ch.shape[1]):
+                        diff = np.abs(ch[i,j,0]-ch[i,j,2])
+                        if diff > 40:
+                            cont += diff
+                reg.append(cont)
+            else:
+                img = cv.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 1)
+
         plt.imshow(img)
         plt.show()
+        pass
 
 
 if __name__ == "__main__":
