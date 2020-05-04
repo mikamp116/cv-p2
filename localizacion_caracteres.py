@@ -4,6 +4,7 @@ from matplotlib import pyplot as plt
 import os
 import sys
 import deteccion_haar as haardet
+import random
 
 
 def load(directory):
@@ -62,6 +63,10 @@ def get_contorno_matricula_haar(input_images):
     return clasificador_matriculas.detect2(input_images, 1.1, 5)
 
 
+def take_first(elem):
+    return elem[0]
+
+
 def get_contornos_caracteres(images):
     contornos = []
     for image in images:
@@ -70,7 +75,11 @@ def get_contornos_caracteres(images):
         for cnt in contours:
             x, y, w, h = cv.boundingRect(cnt)
             if h > 1.1 * w and h > image.shape[0] * 0.4:
-                aux.append((x, y, w, h))
+                if x > image.shape[1] * 0.6:
+                    if h < 3 * w:
+                        aux.append((x, y, w, h))
+                else:
+                    aux.append((x, y, w, h))
         contornos.append(aux)
 
     return contornos
@@ -104,9 +113,10 @@ def localizar():
     #     plt.imshow(image)
     #     plt.show()
 
-
-    roi_matricula = [img[mat[0,1]:mat[0,1]+mat[0,3], mat[0,0]:mat[0,0]+mat[0,2]] for (img, mat) in zip(input_images, matriculas)]
-    roi_matricula_color = [img[mat[0,1]:mat[0,1]+mat[0,3], mat[0,0]:mat[0,0]+mat[0,2]] for (img, mat) in zip(color_images, matriculas)]
+    roi_matricula = [img[mat[0, 1]:mat[0, 1] + mat[0, 3], mat[0, 0]:mat[0, 0] + mat[0, 2]] for (img, mat) in
+                     zip(input_images, matriculas)]
+    roi_matricula_color = [img[mat[0, 1]:mat[0, 1] + mat[0, 3], mat[0, 0]:mat[0, 0] + mat[0, 2]] for (img, mat) in
+                           zip(color_images, matriculas)]
     """for image in roi_matricula:
         plt.imshow(image)
         plt.show()"""
@@ -117,30 +127,29 @@ def localizar():
         plt.show()"""
 
     caracteres = get_contornos_caracteres(matriculas_umbral)
-    for (car, img) in zip(caracteres, roi_matricula_color):
-        means = []
-        sds = []
+    for (matricula, img) in zip(caracteres, roi_matricula_color):
+        to_return = []
         reg = []
-        for (x, y, w, h) in car:
-            ch = img[y:y+h, x:x+w,:]
-            means.append(np.mean(ch))
-            sds.append(np.std(ch))
+        for (x, y, w, h) in matricula:
+            caracter = img[y:y + h, x:x + w, :]
+            a = np.std(caracter[:, :, 0])
+            reg.append((a, (x, y, w, h)))
 
-            if (np.std(ch) > 30):
-                img = cv.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 1)
-                cont = 0
-                for i in range(ch.shape[0]):
-                    for j in range(ch.shape[1]):
-                        diff = np.abs(ch[i,j,0]-ch[i,j,2])
-                        if diff > 40:
-                            cont += diff
-                reg.append(cont)
-            else:
-                img = cv.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 1)
+        if (len(reg) < 8):
+            for (_, (x, y, w, h)) in reg:
+                to_return.append((x, y, w, h))
+                img = cv.rectangle(img, (x, y), (x + w, y + h), (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)), 1)  # rojo
+        else:
+            reg.sort(key=take_first, reverse=True)
+            for (_, (x, y, w, h)) in reg[:7]:
+                to_return.append((x, y, w, h))
+                img = cv.rectangle(img, (x, y), (x + w, y + h), (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)), 1)  # rojo
+
+
 
         plt.imshow(img)
         plt.show()
-        pass
+        return to_return
 
 
 if __name__ == "__main__":
