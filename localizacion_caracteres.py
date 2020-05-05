@@ -92,6 +92,7 @@ def take_first(elem):
 
 
 def get_contornos_caracteres(images):
+    """Devuelve una lista con los caracteres encontrados. Cada posicion de la lista es una lista con cada caracter"""
     contornos = []
     for image in images:
         aux = []
@@ -151,8 +152,9 @@ def localizar():
         plt.show()"""
 
     caracteres = get_contornos_caracteres(matriculas_umbral)
+    to_return = []
     for (matricula, img) in zip(caracteres, roi_matricula_color):
-        to_return = []
+        aux = []
         reg = []
         for (x, y, w, h) in matricula:
             caracter = img[y:y + h, x:x + w, :]
@@ -161,19 +163,20 @@ def localizar():
 
         if (len(reg) < 8):
             for (_, (x, y, w, h)) in reg:
-                to_return.append((x, y, w, h))
+                aux.append((x, y, w, h))
                 img = cv.rectangle(img, (x, y), (x + w, y + h), (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)), 1)  # rojo
         else:
             reg.sort(key=take_first, reverse=True)
             for (_, (x, y, w, h)) in reg[:7]:
-                to_return.append((x, y, w, h))
+                aux.append((x, y, w, h))
                 img = cv.rectangle(img, (x, y), (x + w, y + h), (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)), 1)  # rojo
-
-
 
         plt.imshow(img)
         plt.show()
-        return to_return
+        aux.sort(key=coordenada_x())
+        to_return.append(([aux[:3]], [aux[3:]]))
+
+    return to_return
 
 
 if __name__ == "__main__":
