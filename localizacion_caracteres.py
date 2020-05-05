@@ -41,16 +41,21 @@ def load(directory, color=False, exclude=None):
         return [cv.imread(directory + '/' + file, 0) for file in files]
 
 
-def umbralizado(images, ksize=5, c=2):
+def umbralizado(images, blur=False, tipo=0, ksize=5, c=2):
     imagenes_umbralizadas = []
     for i in range(len(images)):
         image = images[i]
-        blur = cv.GaussianBlur(image, (3, 7), 0)
 
-        th = cv.adaptiveThreshold(image, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, ksize, c)
-        ret2, th2 = cv.threshold(image, 127, 255, cv.THRESH_BINARY)
-        ret3, th3 = cv.threshold(image, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
-        ret4, th4 = cv.threshold(blur, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
+        if blur is True:
+            image = cv.GaussianBlur(image, (3, 7), 0)
+
+        if (tipo==0):
+            th = cv.adaptiveThreshold(image, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, ksize, c)
+        elif (tipo==1):
+            _, th = cv.threshold(image, 127, 255, cv.THRESH_BINARY)
+        else:
+            _, th = cv.threshold(image, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
+        #ret4, th4 = cv.threshold(blur, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
 
         # plt.imshow(th, "gray")
         # plt.show()
