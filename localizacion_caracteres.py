@@ -126,7 +126,7 @@ def get_contornos_matricula(images):
 
 def localizar():
     input_images = load('testing_ocr')
-    color_images = load_color('testing_ocr')
+    color_images = load('testing_ocr', color=True)
     umbral = umbralizado(input_images)
     matriculas = get_contorno_matricula_haar(input_images)
 
