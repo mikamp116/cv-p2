@@ -7,19 +7,38 @@ import deteccion_haar as haardet
 import random
 
 
-def load(directory):
+def coordenada_x(elem):
+    return elem[0]
+
+
+# def load(directory, color=False, exclude=None):
+#     """Recibe el nombre de un directorio y devuelve una lista con las imagenes contenidas en el"""
+#     # https://stackoverflow.com/questions/51520/how-to-get-an-absolute-file-path-in-python#51523
+#     if exclude is None:
+#         exclude = ['.']
+#     cur_dir = os.path.abspath(os.curdir)
+#     files = os.listdir(cur_dir + '/' + directory)
+#     files.sort()
+#     if color is True:
+#         return [cv.imread(directory + '/' + file) for file in files if file[0] not in exclude]
+#     else:
+#         return [cv.imread(directory + '/' + file, 0) for file in files if file[0] not in exclude]
+
+
+def load(directory, color=False, exclude=None):
     """Recibe el nombre de un directorio y devuelve una lista con las imagenes contenidas en el"""
     # https://stackoverflow.com/questions/51520/how-to-get-an-absolute-file-path-in-python#51523
+    if exclude is None:
+        exclude = ['.']
     cur_dir = os.path.abspath(os.curdir)
-    files = os.listdir(cur_dir + '/' + directory)
-    return [cv.imread(directory + '/' + file, 0) for file in files if not file.startswith('.')]
-
-
-def load_color(directory):
-    """Recibe el nombre de un directorio y devuelve una lista con las imagenes contenidas en el a color"""
-    cur_dir = os.path.abspath(os.curdir)
-    files = os.listdir(cur_dir + '/' + directory)
-    return [cv.imread(directory + '/' + file) for file in files if not file.startswith('.')]
+    with os.scandir(cur_dir + '/' + directory) as it:
+        files = [file.name for file in it if file.name[0] not in exclude and file.is_file()]
+    it.close()
+    files.sort()
+    if color is True:
+        return [cv.imread(directory + '/' + file) for file in files]
+    else:
+        return [cv.imread(directory + '/' + file, 0) for file in files]
 
 
 def umbralizado(images, ksize=5, c=2):
