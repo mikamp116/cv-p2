@@ -1,13 +1,14 @@
-import localizacion_caracteres as localizacion
+import string
 import numpy as np
 import cv2 as cv
-from matplotlib import pyplot as plt
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.naive_bayes import GaussianNB
+import localizacion_caracteres as localizacion
 
 
-def area(elem):
-    return elem[2] * elem[3]
+def area(rectangulo):
+    """Devuelve el area de un rectangulo"""
+    return rectangulo[2] * rectangulo[3]
 
 
 def get_contornos_caracteres(images):
@@ -24,82 +25,61 @@ def get_contornos_caracteres(images):
     return contornos
 
 
-training_ocr = localizacion.load('training_ocr', False, ['.', 'A', 'E', 'I', 'O', 'U'])
-training_ocr_color = localizacion.load('training_ocr', True, ['.', 'A', 'E', 'I', 'O', 'U'])
+numbers = [str(n) for n in list(range(10))]
+letters = string.ascii_uppercase
+valid_letters = [c for c in
+                 letters.replace('A', '').replace('E', '').replace('I', '').replace('O', '').replace('U', '')]
+
+training_ocr = localizacion.load('training_ocr', numbers, False)
 # training_ocr_umbralizado = localizacion.umbralizado(training_ocr, 9, 2)
 training_ocr_umbralizado = localizacion.umbralizado(training_ocr, True, 2)
-# for (umbral, color) in zip(training_ocr_umbralizado, training_ocr_color):
-#     plt.imshow(umbral, "gray")
-#     plt.show()
-#     plt.imshow(color, "gray")
-#     plt.show()
 
 traning_ocr_caracteres = get_contornos_caracteres(training_ocr_umbralizado)
 
-contador = np.zeros((31), dtype=np.uint16)
-
-# for i in range(len(training_ocr)):  # para cada imagen
-#     image = training_ocr[i]
-#     color = training_ocr_color[i]
-#     caracteres = traning_ocr_caracteres[i]
-#     caracteres.sort(key=area, reverse=True)
-#     for (x, y, w, h) in caracteres[:2]:
-#         color = cv.rectangle(color, (x, y), (x + w, y + h), (0, 0, 255), 1)
-#         # print(np.mean(image[y:y + h, x:x + w]))
-#         # print(np.std(image[y:y + h, x:x + w]))
-#         # print("---")
-#     contador[i // 250] += len(caracteres[:2])
-#     # plt.imshow(color)
-#     # plt.show()
-
-
-# for (image, contour) in zip(training_ocr_color, traning_ocr_caracteres):
-#     for (x, y, w, h) in contour:
-#         image = cv.rectangle(image, (x, y), (x + w, y + h), (0, 0, 255), 2)
-#         print(np.mean(image[:,:,1]))
-#         print(np.std(image[:,:,1]))
-#         print("---")
-#     plt.imshow(image)
-#     plt.show()
+contador = np.zeros((len(numbers)), dtype=np.uint16)
 
 roi_training_ocr = []
 for i in range(len(training_ocr)):  # para cada imagen
     image = training_ocr[i]
     caracteres = traning_ocr_caracteres[i]
     caracteres.sort(key=area, reverse=True)
-    for (x, y, w, h) in caracteres[:2]:
-        roi_training_ocr.append(image[y:y + h, x:x + w])
-    contador[i // 250] += len(caracteres[:2])
+    # A
+    # for (x, y, w, h) in caracteres[:2]:
+    #     roi_training_ocr.append(image[y:y + h, x:x + w])
+    # contador[i // 250] += len(caracteres[:2])
+    # B
+    if (len(caracteres)>0):
+        p = 0
+        a = caracteres[p]
+        while (area(a) > 0.75 * image.shape[0]*image.shape[1] and p < len(caracteres)-1):
+            p+= 1
+            a = caracteres[p]
+        roi_training_ocr.append(image[a[1]:a[1] + a[3], a[0]:a[0] + a[2]])
+        contador[i // 250] += 1
 
-# for image in roi_training_ocr:
-#     plt.imshow(image)
-#     plt.show()
-
-# contador = [c.astype(np.float32) for c in contador]
 
 E = [i for i in range(contador.shape[0]) for _ in range(contador[i])]
 
-# E = []
-# for i in range(contador.shape[0]):
-#     for _ in range(contador[i]):
-#         E.append(i)
-
-# roi_training_ocr = [image[y:y + h, x:x + w] for (image, contour) in zip(training_ocr, traning_ocr_caracteres)
-#                     for (x, y, w, h) in contour]
 
 traning_ocr_resized = [cv.resize(image, (10, 10), 0, 0, cv.INTER_LINEAR) for image in roi_training_ocr]
 
 C = [char.reshape(1, 100).astype(np.float64) for char in traning_ocr_resized]
 C2 = np.array([char.reshape(1, 100).astype(np.float64) for char in traning_ocr_resized])
-C3 = C2[:,0,:]
-#E = [float(e) for e in E]
+C3 = C2[:, 0, :]
 
 lda = LinearDiscriminantAnalysis()
-lda.fit(C3,E)
+lda.fit(C3, E)
 CR = lda.transform(C3)
 
 gnb = GaussianNB()
 gnb.fit(CR, E)
 output = gnb.predict(CR)
+
+acierto = 0
+for i in output:
+    if i // 250 == int(output[i]):
+        acierto += 1
+acierto = acierto / len(output)
+print(acierto)
 
 pass
