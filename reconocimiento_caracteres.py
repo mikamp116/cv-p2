@@ -1,9 +1,24 @@
+import os
 import string
 import numpy as np
 import cv2 as cv
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.naive_bayes import GaussianNB
 import localizacion_caracteres as localizacion
+
+
+def load(directory, include, color=False):
+    """Recibe el nombre de un directorio y devuelve una lista con las imagenes contenidas en el"""
+    # https://stackoverflow.com/questions/51520/how-to-get-an-absolute-file-path-in-python#51523
+    cur_dir = os.path.abspath(os.curdir)
+    with os.scandir(cur_dir + '/' + directory) as it:
+        files = [file.name for file in it if file.name[0] in include and file.is_file()]
+    it.close()
+    files.sort()
+    if color is True:
+        return [cv.imread(directory + '/' + file) for file in files]
+    else:
+        return [cv.imread(directory + '/' + file, 0) for file in files]
 
 
 def area(rectangulo):
@@ -30,7 +45,7 @@ letters = string.ascii_uppercase
 valid_letters = [c for c in
                  letters.replace('A', '').replace('E', '').replace('I', '').replace('O', '').replace('U', '')]
 
-training_ocr = localizacion.load('training_ocr', numbers, False)
+training_ocr = load('training_ocr', numbers, False)
 # training_ocr_umbralizado = localizacion.umbralizado(training_ocr, 9, 2)
 training_ocr_umbralizado = localizacion.umbralizado(training_ocr, True, 2)
 
@@ -81,5 +96,7 @@ for i in output:
         acierto += 1
 acierto = acierto / len(output)
 print(acierto)
+
+local = localizacion.localizar()
 
 pass

@@ -25,12 +25,14 @@ def coordenada_x(elem):
 #         return [cv.imread(directory + '/' + file, 0) for file in files if file[0] not in exclude]
 
 
-def load(directory, include, color=False):
+def load(directory, color=False, exclude=None):
     """Recibe el nombre de un directorio y devuelve una lista con las imagenes contenidas en el"""
     # https://stackoverflow.com/questions/51520/how-to-get-an-absolute-file-path-in-python#51523
+    if exclude is None:
+        exclude = ['.']
     cur_dir = os.path.abspath(os.curdir)
     with os.scandir(cur_dir + '/' + directory) as it:
-        files = [file.name for file in it if file.name[0] in include and file.is_file()]
+        files = [file.name for file in it if file.name[0] not in exclude and file.is_file()]
     it.close()
     files.sort()
     if color is True:
@@ -144,7 +146,7 @@ def localizar():
         plt.imshow(image)
         plt.show()"""
 
-    matriculas_umbral = umbralizado(roi_matricula, 7, 5)
+    matriculas_umbral = umbralizado(roi_matricula, blur=False, tipo=0, ksize=7, c=5)
     """for m in matriculas_umbral:
         plt.imshow(m, "gray")
         plt.show()"""
@@ -171,7 +173,7 @@ def localizar():
 
         plt.imshow(img)
         plt.show()
-        aux.sort(key=coordenada_x())
+        aux.sort(key=coordenada_x)
         to_return.append(([aux[:3]], [aux[3:]]))
 
     return to_return
