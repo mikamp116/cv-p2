@@ -21,12 +21,11 @@ class HaarDetector:
     def set_min_neighbors(self, min_neighbors):
         self.min_neighbors = min_neighbors
 
-    def detect(self, images):
+    def detect(self, images, scale_factor=None, min_neighbors=None):
         """Devuelve una lista con la coordenada x e y de la esquina superior derecha, la anchura y la altura de la
         region de interes detectada (roi) para cada una de las imagenes"""
-        return [self.classifier.detectMultiScale(image, self.scale_factor, self.min_neighbors) for image in images]
-
-    def detect2(self, images, scale_factor, min_neighbors):
-        """Devuelve una lista con la coordenada x e y de la esquina superior derecha, la anchura y la altura de la
-        region de interes detectada (roi) para cada una de las imagenes"""
+        if scale_factor is None:
+            scale_factor = self.scale_factor
+        if min_neighbors is None:
+            min_neighbors = self.min_neighbors
         return [self.classifier.detectMultiScale(image, scale_factor, min_neighbors) for image in images]

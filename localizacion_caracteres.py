@@ -26,8 +26,8 @@ def coordenada_x(elem):
 
 
 def load(directory, color=False, exclude=None):
-    """Recibe el nombre de un directorio y devuelve una lista con las imagenes contenidas en el"""
-    # https://stackoverflow.com/questions/51520/how-to-get-an-absolute-file-path-in-python#51523
+    """Devuelve una lista con las imagenes en color o escala de grises contenidas en el directorio pasado como argumento
+    descartando aquellas imagenes cuya primera letra este en la lista de excluidos"""
     if exclude is None:
         exclude = ['.']
     cur_dir = os.path.abspath(os.curdir)
@@ -42,6 +42,7 @@ def load(directory, color=False, exclude=None):
 
 
 def umbralizado(images, blur=False, tipo=0, ksize=5, c=2):
+    """Devuelve una lista de imagenes umbralizadas mediante el tipo de umbralizado especificado en los parámetros"""
     imagenes_umbralizadas = []
     for i in range(len(images)):
         image = images[i]
@@ -49,13 +50,13 @@ def umbralizado(images, blur=False, tipo=0, ksize=5, c=2):
         if blur is True:
             image = cv.GaussianBlur(image, (3, 7), 0)
 
-        if (tipo==0):
+        if tipo == 0:
             th = cv.adaptiveThreshold(image, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, ksize, c)
-        elif (tipo==1):
+        elif tipo == 1:
             _, th = cv.threshold(image, 127, 255, cv.THRESH_BINARY)
         else:
             _, th = cv.threshold(image, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
-        #ret4, th4 = cv.threshold(blur, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
+        # ret4, th4 = cv.threshold(blur, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
 
         # plt.imshow(th, "gray")
         # plt.show()
@@ -71,6 +72,7 @@ def umbralizado(images, blur=False, tipo=0, ksize=5, c=2):
     return imagenes_umbralizadas
 
 
+# Metodo inutil
 def pintar_matriculas(input_images):
     clasificador_matriculas = haardet.HaarDetector('haar_opencv_4.1-4.2/matriculas.xml')
     matriculas = clasificador_matriculas.detect(input_images)
@@ -83,6 +85,7 @@ def pintar_matriculas(input_images):
 
 
 def get_contorno_matricula_haar(input_images):
+    """Devuelve una lista con la posion de la matricula"""
     clasificador_matriculas = haardet.HaarDetector('haar_opencv_4.1-4.2/matriculas.xml')
     return clasificador_matriculas.detect2(input_images, 1.1, 5)
 
@@ -124,9 +127,9 @@ def get_contornos_matricula(images):
     return contornos
 
 
-def localizar():
-    input_images = load('testing_ocr')
-    color_images = load('testing_ocr', color=True)
+def localizar(directory):
+    input_images = load(directory)
+    color_images = load(directory, color=True)
     umbral = umbralizado(input_images)
     matriculas = get_contorno_matricula_haar(input_images)
 
@@ -164,20 +167,27 @@ def localizar():
         if (len(reg) < 8):
             for (_, (x, y, w, h)) in reg:
                 aux.append((x, y, w, h))
-                img = cv.rectangle(img, (x, y), (x + w, y + h), (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)), 1)  # rojo
+                img = cv.rectangle(img, (x, y), (x + w, y + h),
+                                   (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)), 1)  # rojo
         else:
             reg.sort(key=take_first, reverse=True)
             for (_, (x, y, w, h)) in reg[:7]:
                 aux.append((x, y, w, h))
-                img = cv.rectangle(img, (x, y), (x + w, y + h), (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)), 1)  # rojo
+                img = cv.rectangle(img, (x, y), (x + w, y + h),
+                                   (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)), 1)  # rojo
 
-        plt.imshow(img)
-        plt.show()
+        # plt.imshow(img)
+        # plt.show()
         aux.sort(key=coordenada_x)
-        to_return.append(([aux[:3]], [aux[3:]]))
+        to_return.append(aux)
 
-    return to_return
+    rels = []
+    for (image, mat) in zip(roi_matricula, to_return):
+        aux = [image[y:y + h, x:x + w] for (x, y, w, h) in mat]
+        rels.append(aux)
+
+    return rels
 
 
 if __name__ == "__main__":
-    localizar()
+    localizar('testing_ocr')
