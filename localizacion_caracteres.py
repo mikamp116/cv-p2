@@ -93,12 +93,16 @@ def take_first(elem):
 def get_contornos_caracteres(images):
     """Devuelve una lista con los caracteres encontrados. Cada posicion de la lista es una lista con cada caracter"""
     contornos = []
+    # Los caracteres deben ser mas altos que anchos y ocupar al menos el 40% de la altura de la matricula
     for image in images:
         aux = []
         contours, _ = cv.findContours(image, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
         for cnt in contours:
             x, y, w, h = cv.boundingRect(cnt)
             if h > 1.1 * w and h > image.shape[0] * 0.4:
+                # Ademas, las letras (seccion derecha de la matricula), tienen una relacion w/h especial ya que no hay
+                # I's ni 1's
+                # se puede mejorar xd
                 if x > image.shape[1] * 0.6:
                     if h < 3 * w:
                         aux.append((x, y, w, h))
@@ -133,11 +137,14 @@ def get_contornos_matricula(images):
 
 
 def localizar(directory):
+    # Imagenes sobre las que detectar en escala de grises. Por cada imagen hay una lista con un elemento por cada
+    # matricula detectada
     input_images, _ = load(directory)
+    # Lo mismo en color
     input_images_color, _ = load(directory, color=True)
-    # umbral = umbralizado(input_images)
+    # Lista de coordenadas de las matriculas. Cada array tiene tantas filas como matriculas hay en la imagen
     matriculas = get_contorno_matricula_haar(input_images)
-
+    # Lista de regiones de las imagenes conteniendo las matriculas
     roi_matricula = []
     for (img, mat) in zip(input_images, matriculas):
         aux = []
@@ -145,14 +152,18 @@ def localizar(directory):
             aux.append(img[y:y + h, x:x + w])
         roi_matricula.append(aux)
 
+    # Creo que esto no sirve para nada
     roi_matricula_color = [img[mat[0, 1]:mat[0, 1] + mat[0, 3], mat[0, 0]:mat[0, 0] + mat[0, 2]] for (img, mat) in
                            zip(input_images_color, matriculas)]
 
+    # Matriculas umbralizadas
     matriculas_umbral = umbralizado_lista(roi_matricula, blur=False, tipo=0, ksize=7, c=5)
-
+    # E invertidas, ya que los caracteres a detectar deben estar en blanco
     matriculas_umbral_inv = negativo(matriculas_umbral)
 
+    # Coordenadas de los caracteres segun ciertas restricciones (mirar metodo)
     caracteres = get_contornos_caracteres_list(matriculas_umbral_inv)
+    # De todos los caracteres queremos obtener 7, ya que tambien detecta la E y las sobras de izquierda y derecha
     to_return = []
     for (coche, img) in zip(caracteres, roi_matricula_color):
         aux_coche = []
@@ -170,6 +181,8 @@ def localizar(directory):
                     img = cv.rectangle(img, (x, y), (x + w, y + h),
                                        (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)), 1)  # rojo
             else:
+                # reg conteiene las desviaciones estandar para distinguir el color azul de la E
+                # funcionó bien durante un tiempo xd
                 reg.sort(key=take_first, reverse=True)
                 for (_, (x, y, w, h)) in reg[:7]:
                     aux_matricula.append((x, y, w, h))
@@ -181,6 +194,7 @@ def localizar(directory):
 
         to_return.append(aux_coche)
 
+    # Obtiene las secciones de imagen con los caracteres
     rels = []
     for (image_list, coche) in zip(roi_matricula, to_return):
         aux = []
@@ -188,6 +202,7 @@ def localizar(directory):
             aux.append([image[y:y + h, x:x + w] for (x, y, w, h) in mat])
         rels.append(aux)
 
+    # Las vuelve a unmbralizar e invertir
     rels_umbral = []
     for li in range(len(rels)):
         rels_umbral.append(umbralizado_lista(rels[li], False, 2))
