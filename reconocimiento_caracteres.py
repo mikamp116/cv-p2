@@ -1,3 +1,8 @@
+"""
+Apartado 2.\n
+Modulo para el reconocimiento de caracteres en matriculas de coches
+"""
+
 import os
 import string
 import numpy as np
@@ -28,6 +33,7 @@ def area(rectangulo):
 
 
 class ReconocimientoCaracteres:
+    """Reduce la dimensionalidad y clasifica los caracteres recibidos"""
     def __init__(self, included_characters, directory):
         self.included_characters = included_characters
         self.images_directory = directory
@@ -35,7 +41,7 @@ class ReconocimientoCaracteres:
         self.gnb = GaussianNB()
 
     def __load(self, color=False, invert=True):
-        """Recibe el nombre de un directorio y devuelve una lista con las imagenes contenidas en el"""
+        """Devuelve una lista con las imagenes contenidas en el directorio de imagenes"""
         cur_dir = os.path.abspath(os.curdir)
         with os.scandir(cur_dir + '/' + self.images_directory) as it:
             files = [file.name for file in it if file.name[0] in self.included_characters and file.is_file()]
@@ -50,6 +56,7 @@ class ReconocimientoCaracteres:
                 return [cv.imread(self.images_directory + '/' + file, 0) for file in files]
 
     def entrenar(self):
+        """Entrena un clasificador Naive Bayes para la deteccion de caracteres"""
         trains = self.__load()
         train_umbralizado = localizacion.umbralizado(trains, False, 2)
         traning_ocr_caracteres = get_contornos_caracteres(train_umbralizado)
@@ -79,7 +86,8 @@ class ReconocimientoCaracteres:
         self.gnb.fit(CR, E)
         return C, E
 
-    def test(self, D, E):
+    def test(self, D):
+        """Comprueba el porcentaje de acierto del clasificador sobre los caracteres de entrenamiento"""
         DR = self.lda.transform(D)
 
         output = self.gnb.predict(DR)
@@ -91,10 +99,7 @@ class ReconocimientoCaracteres:
         acierto = acierto / len(output)
         print(acierto)
 
-    def reconocer(self, D, E):
-        local = localizacion.localizar()
-        local_resized = [cv.resize(image, (10, 10), 0, 0, cv.INTER_LINEAR) for image in local[4][:4]]
-        D = np.array([char.reshape(1, 100).astype(np.float64) for char in local_resized])[:, 0, :]
+    def reconocer(self, D):
+        """Reconoce los caracteres de la matriz D"""
         DR = self.lda.transform(D)
-        output = self.gnb.predict(DR)
-        return output
+        return self.gnb.predict(DR)
