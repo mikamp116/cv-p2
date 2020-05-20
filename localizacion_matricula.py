@@ -19,12 +19,13 @@ def umbralizado(image, blur=False, tipo=0, ksize=11, c=3):
 
     return th
 
-def possible_plate_position(car_x, car_y, rect_x, rect_y):
-    return -150 < (car_x - rect_x) < 100 and -50 < (rect_y - car_y) < 200
 
 def possible_plate(car_pos, rect_dim):
     return possible_plate_position(car_pos[0], car_pos[1], rect_dim[0], rect_dim[1]+rect_dim[3]/2) \
            and minimum_plate_size(rect_dim[2], rect_dim[3])
+
+def possible_plate_position(car_x, car_y, rect_x, rect_y):
+    return -150 < (car_x - rect_x) < 100 and -50 < (rect_y - car_y) < 200
 
 def minimum_plate_size(width, height):
     return width > 40 and height > 9 and 4.2 < width/height < 5.2
@@ -86,7 +87,6 @@ def get_possible_plates(img, car_position, erode=False, esize=3):
     plates = []
     rect_plates, box_plates = find_plate_contours(threshold, car_position)
 
-
     if len(plates) == 0 or erode:
         kernel = np.ones((esize, esize), np.uint8)
         eroded_img = cv2.erode(threshold, kernel, iterations=1)
@@ -135,7 +135,7 @@ def buscar_matricula(image, orb, match_table, flann):
     detected_points = deteccion_orb.detect([image], orb, match_table, flann, 4, 2, 1)
     centre = detected_points[0]
     rect_plates, box_plates = get_possible_plates(image, centre)
-    numbers = find_numbers_in_plates(image, rect_plates, rotated_plate=True)
+    numbers, plate_index = find_numbers_in_plates(image, rect_plates, rotated_plate=True)
     for j in range(2, 5):
         if len(numbers) < 4:
             rect_plates, box_plates = get_possible_plates(image, centre, erode=True, esize=j)
