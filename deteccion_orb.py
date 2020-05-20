@@ -5,9 +5,6 @@ import numpy as np
 import sys
 import math
 
-assert (sys.version.startswith('3.7')), "No se esta usando la version 3.7 de Python. Version en uso: " + sys.version
-assert (cv2.__version__.startswith('4.2')), "No se esta usando la version 4.2 de OpenCV. Version en uso: " + cv2.__version__
-
 
 def ordenar(lst):
     """Recibe una lista y la devuelve ordenada"""
