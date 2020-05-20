@@ -144,6 +144,7 @@ def localizar(directory):
     input_images_color, _ = load(directory, color=True)
     # Lista de coordenadas de las matriculas. Cada array tiene tantas filas como matriculas hay en la imagen
     matriculas = get_contorno_matricula_haar(input_images)
+
     # Lista de regiones de las imagenes conteniendo las matriculas
     roi_matricula = []
     for (img, mat) in zip(input_images, matriculas):
@@ -152,12 +153,8 @@ def localizar(directory):
             aux.append(img[y:y + h, x:x + w])
         roi_matricula.append(aux)
 
-    # Creo que esto no sirve para nada
-    roi_matricula_color = [img[mat[0, 1]:mat[0, 1] + mat[0, 3], mat[0, 0]:mat[0, 0] + mat[0, 2]] for (img, mat) in
-                           zip(input_images_color, matriculas)]
-
     # Matriculas umbralizadas
-    matriculas_umbral = umbralizado_lista(roi_matricula, blur=False, tipo=0, ksize=7, c=5)
+    matriculas_umbral = umbralizado_lista(roi_matricula, blur=False, tipo=0, ksize=7, c=11)
     # E invertidas, ya que los caracteres a detectar deben estar en blanco
     matriculas_umbral_inv = negativo(matriculas_umbral)
 
@@ -165,29 +162,26 @@ def localizar(directory):
     caracteres = get_contornos_caracteres_list(matriculas_umbral_inv)
     # De todos los caracteres queremos obtener 7, ya que tambien detecta la E y las sobras de izquierda y derecha
     to_return = []
-    for (coche, img) in zip(caracteres, roi_matricula_color):
+    for coche in caracteres:
         aux_coche = []
         for matricula in coche:
             aux_matricula = []
             reg = []
             for (x, y, w, h) in matricula:
-                caracter = img[y:y + h, x:x + w, :]
-                a = np.std(caracter[:, :, 0])
-                reg.append((a, (x, y, w, h)))
+                reg.append((h, (x, y, w, h)))
 
             if (len(reg) < 8):
                 for (_, (x, y, w, h)) in reg:
                     aux_matricula.append((x, y, w, h))
-                    img = cv.rectangle(img, (x, y), (x + w, y + h),
-                                       (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)), 1)  # rojo
             else:
-                # reg conteiene las desviaciones estandar para distinguir el color azul de la E
-                # funcionó bien durante un tiempo xd
-                reg.sort(key=take_first, reverse=True)
+                mean_y = 0
+                for (y,_) in reg:
+                    mean_y += y
+                mean_y = mean_y / len(reg)
+
+                reg.sort(key=lambda r: np.abs(r[0]-mean_y))
                 for (_, (x, y, w, h)) in reg[:7]:
                     aux_matricula.append((x, y, w, h))
-                    img = cv.rectangle(img, (x, y), (x + w, y + h),
-                                       (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)), 1)  # rojo
 
             aux_matricula.sort(key=coordenada_x)
             aux_coche.append(aux_matricula)
