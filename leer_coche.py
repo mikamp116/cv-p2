@@ -53,38 +53,40 @@ def leer(directorio, visualizar):
     for img in range(len(local_resized)):
         imagen = input_images_color[img]
         for m in range(len(local_resized[img])):
-            F = np.array([char for char in local_resized[img][m]])[:, 0, :]
-            out_numeros = numeros.reconocer(F[:4])
-            out_letras = [letras.included_characters[i] for i in letras.reconocer(F[-3:])]
-            texto_matricula_numeros = str(out_numeros[0]) + str(out_numeros[1]) + str(out_numeros[2]) \
-                                      + str(out_numeros[3])
-            texto_matricula_letras = str(out_letras[0]) + str(out_letras[1]) + str(out_letras[2])
+            if len(local_resized[img][0]) > 0:
+                F = np.array([char for char in local_resized[img][m]])[:, 0, :]
+                out_numeros = numeros.reconocer(F[:4])
+                out_letras = [letras.included_characters[i] for i in letras.reconocer(F[-3:])]
+                texto_matricula_numeros = str(out_numeros[0]) + str(out_numeros[1]) + str(out_numeros[2]) \
+                                          + str(out_numeros[3])
+                texto_matricula_letras = str(out_letras[0]) + str(out_letras[1]) + str(out_letras[2])
 
-            (x, y, w, h) = matriculas[img][m]
+                (x, y, w, h) = matriculas[img][m]
 
-            nombre_imagen = get_name(nombre_imagenes[img])
-            x_centro_matricula = x + w // 2
-            y_centro_matricula = y + h // 2
-            texto_matricula = texto_matricula_numeros + ' ' + texto_matricula_letras
-            mitad_largo_matricula = w // 2
-            file.write(str(nombre_imagen) + ' ' + str(x_centro_matricula) + ' ' + str(y_centro_matricula) + ' ' +
-                       texto_matricula + ' ' + str(mitad_largo_matricula) + '\n')
+                nombre_imagen = get_name(nombre_imagenes[img])
+                x_centro_matricula = x + w // 2
+                y_centro_matricula = y + h // 2
+                texto_matricula = texto_matricula_numeros + ' ' + texto_matricula_letras
+                mitad_largo_matricula = w // 2
+                file.write(str(nombre_imagen) + ' ' + str(x_centro_matricula) + ' ' + str(y_centro_matricula) + ' ' +
+                           texto_matricula + ' ' + str(mitad_largo_matricula) + '\n')
 
-            imagen = cv.rectangle(imagen, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            imagen = cv.circle(imagen, (x_centro_matricula, y_centro_matricula), 5, (0, 255, 0), thickness=2,
-                               lineType=8, shift=0)
+                imagen = cv.rectangle(imagen, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                imagen = cv.circle(imagen, (x_centro_matricula, y_centro_matricula), 5, (0, 255, 0), thickness=2,
+                                   lineType=8, shift=0)
 
-            matricula = caracteres[img][m]
-            caracteres_matricula = texto_matricula.replace(' ', '')
-            for i in range(len(matricula)):
-                (a, b, c, d) = matricula[i]
-                imagen = cv.rectangle(imagen, (x+a, y+b), (x+a + c, y+b + d), (0, 0, 255), 1)
-                imagen = cv.putText(imagen, caracteres_matricula[i], (x+a,y+b), cv.FONT_HERSHEY_SIMPLEX,
-                                1, (255, 0, 0), 1, cv.LINE_AA)
+                matricula = caracteres[img][m]
+                caracteres_matricula = texto_matricula.replace(' ', '')
+                for i in range(len(matricula)):
+                    (a, b, c, d) = matricula[i]
+                    imagen = cv.rectangle(imagen, (x+a, y+b), (x+a + c, y+b + d), (0, 0, 255), 1)
+                    imagen = cv.putText(imagen, caracteres_matricula[i], (x+a,y+b), cv.FONT_HERSHEY_SIMPLEX,
+                                    1, (255, 0, 0), 1, cv.LINE_AA)
 
         if visualizar:
-            plt.imshow(imagen)
+            plt.imshow(cv.cvtColor(imagen, cv.COLOR_RGB2BGR))
             plt.show()
+            pass
 
     file.close()
 

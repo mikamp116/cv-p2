@@ -5,6 +5,9 @@ import numpy as np
 import cv2 as cv
 from matplotlib import pyplot as plt
 import deteccion_haar as haardet
+import deteccion_orb
+import localizacion_matricula
+from operator import itemgetter
 
 
 def coordenada_x(elem):
@@ -17,7 +20,11 @@ def load(directory, color=False, exclude=None):
     if exclude is None:
         exclude = ['.']
     cur_dir = os.path.abspath(os.curdir)
-    with os.scandir(cur_dir + '/' + directory) as it:
+    if directory.startswith("/"):
+        path = directory
+    else:
+        path = cur_dir + '/' + directory
+    with os.scandir(path) as it:
         files = [file.name for file in it if file.name[0] not in exclude and file.is_file()]
     it.close()
     files.sort()
@@ -145,9 +152,38 @@ def localizar(directory):
     # Lista de coordenadas de las matriculas. Cada array tiene tantas filas como matriculas hay en la imagen
     matriculas = get_contorno_matricula_haar(input_images)
 
+    train_images = deteccion_orb.load()
+    orb = cv.ORB_create(nfeatures=300, scaleFactor=1.3, nlevels=4)
+    match_table, flann = deteccion_orb.train(train_images, orb)
+
+    matriculas_total = []
+    caracteres = []
+
+
+    for i in range(len(matriculas)):
+        if len(matriculas[i]) > 0:
+            numbers, _ = localizacion_matricula.find_numbers_in_plates(input_images[i], matriculas[i])
+            rect_plate = matriculas[i]
+            rect_plate = rect_plate[0]
+            caracteres.append([numbers])
+            matriculas_total.append([rect_plate])
+        else:
+            detected_points = deteccion_orb.detect([input_images[i]], orb, match_table, flann, 4, 2, 1)
+            centre = detected_points[0]
+            rect_plates, box_plates = localizacion_matricula.get_possible_plates(input_images[i], centre)
+            numbers = localizacion_matricula.find_numbers_in_plates(input_images[i], rect_plates, rotated_plate=True)
+            for j in range(2, 5):
+                if len(numbers) < 4:
+                    rect_plates, box_plates = localizacion_matricula.get_possible_plates(input_images[i], centre, erode=True, esize=j)
+                    numbers, plate_index = localizacion_matricula.find_numbers_in_plates(input_images[i], rect_plates, rotated_plate=True)
+            if len(rect_plates) > 0:
+                rect_plate = rect_plates[plate_index]
+            caracteres.append([numbers])
+            matriculas_total.append(np.array([rect_plate]))
+
     # Lista de regiones de las imagenes conteniendo las matriculas
     roi_matricula = []
-    for (img, mat) in zip(input_images, matriculas):
+    for (img, mat) in zip(input_images, matriculas_total):
         aux = []
         for (x, y, w, h) in mat:
             aux.append(img[y:y + h, x:x + w])
@@ -159,7 +195,7 @@ def localizar(directory):
     matriculas_umbral_inv = negativo(matriculas_umbral)
 
     # Coordenadas de los caracteres segun ciertas restricciones (mirar metodo)
-    caracteres = get_contornos_caracteres_list(matriculas_umbral_inv)
+    # caracteres = get_contornos_caracteres_list(matriculas_umbral_inv)
     # De todos los caracteres queremos obtener 7, ya que tambien detecta la E y las sobras de izquierda y derecha
     to_return = []
     for coche in caracteres:
@@ -205,7 +241,7 @@ def localizar(directory):
     for li in rels_umbral:
         rels_umbral_inv.append(negativo(li))
 
-    return rels_umbral_inv, matriculas, to_return
+    return rels_umbral_inv, matriculas_total, to_return
 
 
 if __name__ == "__main__":
