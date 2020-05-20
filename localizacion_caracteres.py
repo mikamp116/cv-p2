@@ -1,13 +1,9 @@
 import os
-import sys
-import random
 import numpy as np
 import cv2 as cv
-from matplotlib import pyplot as plt
 import deteccion_haar as haardet
 import deteccion_orb
 import localizacion_matricula
-from operator import itemgetter
 
 
 def coordenada_x(elem):
@@ -75,72 +71,10 @@ def negativo(images):
     return images_negativo
 
 
-# Metodo inutil
-def pintar_matriculas(input_images):
-    clasificador_matriculas = haardet.HaarDetector('haar_opencv_4.1-4.2/matriculas.xml')
-    matriculas = clasificador_matriculas.detect(input_images)
-    for i in range(len(matriculas)):
-        image = input_images[i]
-        for (x, y, w, h) in matriculas[i]:
-            image = cv.rectangle(image, (x, y), (x + w, y + h), (0, 0, 255), 2)
-        plt.imshow(image)
-        plt.show()
-
-
 def get_contorno_matricula_haar(input_images):
     """Devuelve una lista con la posion de la matricula"""
     clasificador_matriculas = haardet.HaarDetector('haar_opencv_4.1-4.2/matriculas.xml')
     return clasificador_matriculas.detect(input_images, 1.1, 5)
-
-
-def take_first(elem):
-    return elem[0]
-
-
-def get_contornos_caracteres(images):
-    """Devuelve una lista con los caracteres encontrados. Cada posicion de la lista es una lista con cada caracter"""
-    contornos = []
-    # Los caracteres deben ser mas altos que anchos y ocupar al menos el 40% de la altura de la matricula
-    for image in images:
-        aux = []
-        contours, _ = cv.findContours(image, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
-        for cnt in contours:
-            x, y, w, h = cv.boundingRect(cnt)
-            if h > 1.1 * w and h > image.shape[0] * 0.4:
-                # Ademas, las letras (seccion derecha de la matricula), tienen una relacion w/h especial ya que no hay
-                # I's ni 1's
-                # se puede mejorar xd
-                if x > image.shape[1] * 0.6:
-                    if h < 3 * w:
-                        aux.append((x, y, w, h))
-                else:
-                    aux.append((x, y, w, h))
-        contornos.append(aux)
-
-    return contornos
-
-
-def get_contornos_caracteres_list(images):
-    contornos = []
-    for image_list in images:
-        contornos.append(get_contornos_caracteres(image_list))
-
-    return contornos
-
-
-
-def get_contornos_matricula(images):
-    contornos = []
-    for image in images:
-        aux = []
-        contours, _ = cv.findContours(image, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
-        for cnt in contours:
-            x, y, w, h = cv.boundingRect(cnt)
-            if 1.5 * h < w < 7 * h:
-                aux.append((x, y, w, h))
-        contornos.append(aux)
-
-    return contornos
 
 
 def localizar(directory):
@@ -159,7 +93,6 @@ def localizar(directory):
     matriculas_total = []
     caracteres = []
 
-
     for i in range(len(matriculas)):
         if len(matriculas[i]) > 0:
             numbers, _ = localizacion_matricula.find_numbers_in_plates(input_images[i], matriculas[i])
@@ -174,8 +107,10 @@ def localizar(directory):
             numbers = localizacion_matricula.find_numbers_in_plates(input_images[i], rect_plates, rotated_plate=True)
             for j in range(2, 5):
                 if len(numbers) < 4:
-                    rect_plates, box_plates = localizacion_matricula.get_possible_plates(input_images[i], centre, erode=True, esize=j)
-                    numbers, plate_index = localizacion_matricula.find_numbers_in_plates(input_images[i], rect_plates, rotated_plate=True)
+                    rect_plates, box_plates = localizacion_matricula.get_possible_plates(input_images[i], centre,
+                                                                                         erode=True, esize=j)
+                    numbers, plate_index = localizacion_matricula.find_numbers_in_plates(input_images[i], rect_plates,
+                                                                                         rotated_plate=True)
             if len(rect_plates) > 0:
                 rect_plate = rect_plates[plate_index]
             caracteres.append([numbers])
@@ -189,59 +124,52 @@ def localizar(directory):
             aux.append(img[y:y + h, x:x + w])
         roi_matricula.append(aux)
 
-    # Matriculas umbralizadas
-    matriculas_umbral = umbralizado_lista(roi_matricula, blur=False, tipo=0, ksize=7, c=11)
-    # E invertidas, ya que los caracteres a detectar deben estar en blanco
-    matriculas_umbral_inv = negativo(matriculas_umbral)
-
-    # Coordenadas de los caracteres segun ciertas restricciones (mirar metodo)
-    # caracteres = get_contornos_caracteres_list(matriculas_umbral_inv)
     # De todos los caracteres queremos obtener 7, ya que tambien detecta la E y las sobras de izquierda y derecha
-    to_return = []
+    caracteristicas_seleccionadas = []
     for coche in caracteres:
         aux_coche = []
         for matricula in coche:
             aux_matricula = []
-            reg = []
+            medias = []
             for (x, y, w, h) in matricula:
-                reg.append((h, (x, y, w, h)))
+                medias.append((h, (x, y, w, h)))
 
-            if (len(reg) < 8):
-                for (_, (x, y, w, h)) in reg:
+            if (len(medias) < 8):
+                for (_, (x, y, w, h)) in medias:
                     aux_matricula.append((x, y, w, h))
             else:
                 mean_y = 0
-                for (y,_) in reg:
+                for (y, _) in medias:
                     mean_y += y
-                mean_y = mean_y / len(reg)
+                mean_y = mean_y / len(medias)
 
-                reg.sort(key=lambda r: np.abs(r[0]-mean_y))
-                for (_, (x, y, w, h)) in reg[:7]:
+                medias.sort(key=lambda r: np.abs(r[0] - mean_y))
+                for (_, (x, y, w, h)) in medias[:7]:
                     aux_matricula.append((x, y, w, h))
 
             aux_matricula.sort(key=coordenada_x)
             aux_coche.append(aux_matricula)
 
-        to_return.append(aux_coche)
+        caracteristicas_seleccionadas.append(aux_coche)
 
     # Obtiene las secciones de imagen con los caracteres
-    rels = []
-    for (image_list, coche) in zip(roi_matricula, to_return):
+    roi_caracteres = []
+    for (image_list, coche) in zip(roi_matricula, caracteristicas_seleccionadas):
         aux = []
         for (image, mat) in zip(image_list, coche):
             aux.append([image[y:y + h, x:x + w] for (x, y, w, h) in mat])
-        rels.append(aux)
+        roi_caracteres.append(aux)
 
     # Las vuelve a unmbralizar e invertir
-    rels_umbral = []
-    for li in range(len(rels)):
-        rels_umbral.append(umbralizado_lista(rels[li], False, 2))
+    roi_caracteres_umbral = []
+    for li in range(len(roi_caracteres)):
+        roi_caracteres_umbral.append(umbralizado_lista(roi_caracteres[li], False, 2))
 
-    rels_umbral_inv = []
-    for li in rels_umbral:
-        rels_umbral_inv.append(negativo(li))
+    roi_caracteres_umbral_inv = []
+    for li in roi_caracteres_umbral:
+        roi_caracteres_umbral_inv.append(negativo(li))
 
-    return rels_umbral_inv, matriculas_total, to_return
+    return roi_caracteres_umbral_inv, matriculas_total, caracteristicas_seleccionadas
 
 
 if __name__ == "__main__":

@@ -4,13 +4,11 @@ Modulo para el reconocimiento de caracteres en matriculas de coches
 """
 
 import os
-import string
 import numpy as np
 import cv2 as cv
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.naive_bayes import GaussianNB
 import localizacion_caracteres as localizacion
-from matplotlib import pyplot as plt
 
 
 def get_contornos_caracteres(images):
@@ -33,8 +31,10 @@ def area(rectangulo):
 
 
 class ReconocimientoCaracteres:
-    """Reduce la dimensionalidad y clasifica los caracteres recibidos"""
+    """Reconocedor de caracteres en matriculas mediante LDA y GNB"""
+
     def __init__(self, included_characters, directory):
+        """Crea un LDA y un GNB para el reconocimiento de caracteres"""
         self.included_characters = included_characters
         self.images_directory = directory
         self.lda = LinearDiscriminantAnalysis()
@@ -80,24 +80,10 @@ class ReconocimientoCaracteres:
         C = np.array([char.reshape(1, 100).astype(np.float64) for char in traning_ocr_resized])[:, 0, :]
 
         self.lda.fit(C, E)
-
         CR = self.lda.transform(C)
-
         self.gnb.fit(CR, E)
+
         return C, E
-
-    def test(self, D):
-        """Comprueba el porcentaje de acierto del clasificador sobre los caracteres de entrenamiento"""
-        DR = self.lda.transform(D)
-
-        output = self.gnb.predict(DR)
-
-        acierto = 0
-        for i in output:
-            if i // 250 == int(output[i]):
-                acierto += 1
-        acierto = acierto / len(output)
-        print(acierto)
 
     def reconocer(self, D):
         """Reconoce los caracteres de la matriz D"""

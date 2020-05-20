@@ -1,10 +1,10 @@
 import cv2 as cv
 
-# https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_objdetect/py_face_detection/py_face_detection.html
-
 
 class HaarDetector:
+    """Detector de regiones de interes mediante un clasificador en cascada."""
     def __init__(self, classifier_file, scale_factor=1.3, min_neighbors=5):
+        """Crea y entrena un detector en cascada"""
         self.classifier = cv.CascadeClassifier(classifier_file)
         self.scale_factor = scale_factor
         self.min_neighbors = min_neighbors
@@ -23,7 +23,7 @@ class HaarDetector:
 
     def detect(self, images, scale_factor=None, min_neighbors=None):
         """Devuelve una lista con la coordenada x e y de la esquina superior derecha, la anchura y la altura de la
-        region de interes detectada (roi) para cada una de las imagenes"""
+        region de interes detectada para cada una de las imagenes"""
         if scale_factor is None:
             scale_factor = self.scale_factor
         if min_neighbors is None:
