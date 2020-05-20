@@ -136,7 +136,7 @@ def find_numbers_in_plates(img, possible_plates, rotated_plate=False):
             if area > 15:
                 x, y, w, h = cv2.boundingRect(cnt)
                 if min_wh_ratio < h/w < max_wh_ratio:
-                    chars_in_plate.append((x+plate[0],y+plate[1],w,h))
+                    chars_in_plate.append((x,y,w,h))
         chars_in_plate = get_external_rectangles2(chars_in_plate)
 
         chars_found.append(len(chars_in_plate))
@@ -153,6 +153,17 @@ def find_numbers_in_plates(img, possible_plates, rotated_plate=False):
 
     return chars_in_plate, most_chars_plate_index
 
+def buscar_matricula(image, orb, match_table, flann):
+    detected_points = deteccion_orb.detect([image], orb, match_table, flann, 4, 2, 1)
+    centre = detected_points[0]
+    rect_plates, box_plates = get_possible_plates(image, centre)
+    numbers = find_numbers_in_plates(image, rect_plates, rotated_plate=True)
+    for j in range(2, 5):
+        if len(numbers) < 4:
+            rect_plates, box_plates = get_possible_plates(image, centre, erode=True, esize=j)
+            numbers, plate_index = find_numbers_in_plates(image, rect_plates, rotated_plate=True)
+    rect_plate = rect_plates[plate_index]
+    return rect_plate
 
 if __name__ == '__main__':
     train_images = deteccion_orb.load()
@@ -174,7 +185,7 @@ if __name__ == '__main__':
             rect_plate = matriculas_haar[i]
             rect_plate = rect_plate[0]
             box_plate = []
-            numbers = numbers[0]
+            numbers = numbers[0][0]
         else:
             detected_points = deteccion_orb.detect([images[i]], orb, match_table, flann, 4, 2, 1)
             centre = detected_points[0]
@@ -185,8 +196,9 @@ if __name__ == '__main__':
                     rect_plates, box_plates = get_possible_plates(images[i], centre, erode=True, esize=j)
                     numbers, plate_index = find_numbers_in_plates(images[i], rect_plates, rotated_plate=True)
             rect_plate = rect_plates[plate_index]
+            rect_plate = rect_plate[0]
             box_plate = box_plates[plate_index]
-        caracteres.append(numbers)
+        caracteres.append(numbers[0])
         coche = caracteristicas_coche.CarFeatures(files[i], images[i], color_images[i], centre, rect_plate, box_plate,
                                                   numbers)
         coche.mostrar()
