@@ -164,6 +164,7 @@ if __name__ == '__main__':
     color_images = load_color(files)
     matriculas_haar = get_contorno_matricula_haar(images)
     caracteres = []
+    coches = []
 
     for i in range(len(images)):
         # primero intentamos buscar la matricula con haar
@@ -189,3 +190,4 @@ if __name__ == '__main__':
         coche = caracteristicas_coche.CarFeatures(files[i], images[i], color_images[i], centre, rect_plate, box_plate,
                                                   numbers)
         coche.mostrar()
+        coches.append(coche)
