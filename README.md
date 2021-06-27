@@ -2,11 +2,11 @@
 
 ## 0. Demo
 
-
+![cv-p2](https://user-images.githubusercontent.com/48054735/123557765-19538380-d793-11eb-92cc-9afc183209ab.gif)
 
 ## 1. Localización de los caracteres de la matricula
 
-Este apartado consiste en la construcción de un sistema que permita la localización de los dígitos de la matrícula de un coche
+Este apartado consiste en la construcción de un sistema que permita la localización de los caracteres de la matrícula de un coche
 dada la caja que contiene el frontal del coche. Para ello, se parte de la detección del frontal del coche realizada en 
 [cv-p1](https://github.com/mikamp116/cv-p1), y en esta sección se realizará el siguiente paso necesario para la lectura de matrículas.
 
@@ -16,15 +16,13 @@ de componentes conexas.
 ## 2. Reconocimiento de los caracteres localizados (OCR)
 
 Este apartado consiste en la construcción de un sistema que clasifique correctamente los caracteres de una matrícula.
-
 Para ello se proporciona un conjunto de entrenamiento que contiene 250 variaciones de cada uno de los caracteres que puede aparecer 
 en una matrícula (en concreto los caracteres 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ y adicionalmente el símbolo con la
 E de España y la bandera de la UE que aparece a la izquierda de las matrículas actuales).
 
 ## 3. Integración de todos los algoritmos (localizar coche, matrícula y OCR)
 
-Este apartado consiste en desarrollar un sistema que utilice los detectores desarrollados en [cv-p1](https://github.com/mikamp116/cv-p1) y en este 
-repositorio para construir un programa que lea la matricula de los coches que aparezcan en imágenes y vídeo.
+Este apartado consiste en el desarrollo de un sistema que utilice los detectores desarrollados en [cv-p1](https://github.com/mikamp116/cv-p1) y en los apartados anteriores para construir un programa que lea la matricula de los coches que aparecen en imágenes y vídeos.
 
 ## 4. Ejecución
 
